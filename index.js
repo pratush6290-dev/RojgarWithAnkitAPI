@@ -33,7 +33,7 @@ const Batch = mongoose.model('Batch', batchSchema);
 
 // 1. Home Route
 app.get('/', (req, res) => {
-    res.send("Gupta RWA API is Running Live! 🚀");
+    res.send("RojgarWithAnkitAPI is Running Live! 🚀");
 });
 
 // 2. Data Update Route (Original se lekar DB me save karega)
@@ -94,4 +94,5 @@ app.get('/api/my-batches', async (req, res) => {
 // --- Start Server ---
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+
 });
