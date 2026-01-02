@@ -11,36 +11,47 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 // ====================================================
-// 👇 AAPKA FINAL DATABASE CONNECTION 👇
+// 👇 DATABASE CONNECTION 👇
 // ====================================================
 const MONGO_URI = process.env.MONGO_URI;
 
-// --- Database Connection ---
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Connected Successfully! (Badhai Ho!)"))
+    .then(() => console.log("✅ MongoDB Connected Successfully!"))
     .catch(err => console.error("❌ MongoDB Error:", err));
 
-// --- Schema (Data Design) ---
+// --- Schema ---
 const batchSchema = new mongoose.Schema({
     id: { type: String, unique: true }, 
     course_name: String,
-    raw_data: Object // Poora data backup
+    raw_data: Object 
 });
 
 const Batch = mongoose.model('Batch', batchSchema);
 
-// --- API Routes ---
+// ====================================================
+// 👇 ROUTES 👇
+// ====================================================
 
-// 1. Home Route
+// 1. Home Route (Ab JSON format me dikhega)
 app.get('/', (req, res) => {
-    res.send("RojgarWithAnkitAPI is Running Live! 🚀");
+    res.json({
+        "message": "🚀 RojgarWithAnkitAPI API is Live and Running!",
+        "status": "Healthy",
+        "sync_interval": "Every 2-5 minutes",
+        "endpoints": {
+            "all_batches": "/api/my-batches",
+            "force_sync": "/api/update-batches",
+            "batch_details": "/chapter/[batch_id]",
+            "pdf_details": "/pdf/[batch_id]"
+        },
+        "author": "𓍯𝐆𝐮𝐩𝐭𝐚✿"
+    });
 });
 
-// 2. Data Update Route (Original se lekar DB me save karega)
+// 2. Data Update Route
 app.get('/api/update-batches', async (req, res) => {
     try {
         console.log("Fetching from Original Source...");
-        // Original API call
         const response = await axios.get("https://rwawebfree.vercel.app/api/proxy?endpoint=/get/mycoursev2?");
         const batches = response.data.data; 
 
@@ -48,7 +59,6 @@ app.get('/api/update-batches', async (req, res) => {
 
         let savedCount = 0;
         for (let item of batches) {
-            // Agar ID pehle se hai to update karo, nahi to naya banao
             await Batch.findOneAndUpdate(
                 { id: item.id },
                 { 
@@ -66,22 +76,16 @@ app.get('/api/update-batches', async (req, res) => {
             message: `Successfully synced ${savedCount} batches to MongoDB!`,
             timestamp: new Date()
         });
-
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// 3. Main API (Jo App me use hogi - Saved Data Dikhane ke liye)
+// 3. Main API (Saved Data)
 app.get('/api/my-batches', async (req, res) => {
     try {
-        // Database se data nikalo
         const data = await Batch.find({}, { raw_data: 1, _id: 0 });
-        
-        // Original format wapas banate hain
         const formattedData = data.map(b => b.raw_data);
-        
         res.json({
             success: true,
             data: formattedData
@@ -91,8 +95,20 @@ app.get('/api/my-batches', async (req, res) => {
     }
 });
 
+// ====================================================
+// 👇 SELF-PING LOGIC (24/7 Render Pe Chalane Ke Liye) 👇
+// ====================================================
+const API_URL = `https://${process.env.RENDER_EXTERNAL_HOSTNAME || 'localhost:'+PORT}`;
+
+setInterval(() => {
+    // Ye har 5 minute me khud ko ping karega
+    axios.get(API_URL)
+        .then(() => console.log("Keeping API Alive... ✅"))
+        .catch((err) => console.log("Ping Failed: ", err.message));
+}, 300000); // 300000ms = 5 minutes
+
+
 // --- Start Server ---
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-
 });
